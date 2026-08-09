@@ -28,7 +28,7 @@ import {
 import { toggleLike, toggleReaction, getMyReactions, getReactionCounts, getLikeCount, getPostLikers, subscribeToLikes } from '../lib/reactions.js';
 import { addComment, getPostComments, deleteComment } from '../lib/comments.js';
 import { toggleFollow, isFollowing, getFollowerCount, getFollowingCount, getFollowers, getFollowing } from '../lib/follows.js';
-import { toggleSave, getSavedPosts } from '../lib/saves.js';
+import { toggleSave, getSavedPosts, getMySavedIds } from '../lib/saves.js';
 import { getNotifications, markAsRead, markAllAsRead, clearNotifications, subscribeToNotifications, createNotification } from '../lib/notifications.js';
 import { getBalance, earnVicoins, spendVicoins, getTransactionHistory, hasEarnedReward } from '../lib/vicoins.js';
 import { computeVisibility, getVisibilityBreakdown, updateReputation } from '../lib/visibility.js';
@@ -418,15 +418,27 @@ export async function doGetFollowing(userId) {
 
 export async function doToggleSave(postId) {
   const result = await toggleSave(postId);
+  if (!result.error) {
+    // Sync localSavedPosts with DB state
+    const { savedIds } = await getMySavedIds();
+    localSavedPosts = savedIds;
+  }
   emit();
   return result;
 }
 
 export async function doLoadSavedPosts() {
   const result = await getSavedPosts();
-  localSavedPosts = result.posts;
+  localSavedPosts = (result.posts || []).map(p => p.id);
   emit();
   return result;
+}
+
+export async function doLoadSavedIds() {
+  const { savedIds } = await getMySavedIds();
+  localSavedPosts = savedIds;
+  emit();
+  return savedIds;
 }
 
 // ---------------------------------------------------------------------------
@@ -468,7 +480,7 @@ export async function doClearNotifications() {
 }
 
 function getNotificationsList() { return localNotifications; }
-function getSavedPostsList() { return localSavedPosts; }
+function getSavedPostsList() { return localSavedPosts || []; }
 function getTransactionsList() { return localTransactions; }
 function getBoostsList() { return localBoosts; }
 function getVisibility() { return localVisibility; }

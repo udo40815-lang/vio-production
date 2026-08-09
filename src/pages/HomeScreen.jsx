@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { V, safe, fmt, timeAgo, gradientStyle, softGradientStyle } from '../utils/design-system.js';
 import { Sparkles, Camera, Compass, Users, Sparkle } from 'lucide-react';
-import { doToggleSave, doDeletePost, doUpdatePost, doSubmitReport, doLikePost, doReact, doLoadLikes } from '../store/index.js';
+import { doToggleSave, doDeletePost, doUpdatePost, doSubmitReport, doLikePost, doReact, doLoadLikes, doLoadSavedIds } from '../store/index.js';
 import { subscribeToLikes, getReactionCounts, getMyReactions } from '../lib/reactions.js';
 import PostCard from '../components/feed/PostCard.jsx';
 import MissionCard from '../components/feed/MissionCard.jsx';
@@ -80,14 +80,29 @@ function HomeScreen({ ui, posts }) {
     }
   };
 
-  // Handle real save with Supabase
+  // Handle real save with Supabase — optimistic with error rollback
   const handleSave = async (postId) => {
     const already = savedIds.has(postId);
     // Optimistic update
     setSavedIds(s => { const n = new Set(s); already ? n.delete(postId) : n.add(postId); return n; });
     // Persist to Supabase
-    await doToggleSave(postId);
+    const result = await doToggleSave(postId);
+    if (result.error) {
+      // Rollback on error
+      setSavedIds(s => { const n = new Set(s); already ? n.add(postId) : n.delete(postId); return n; });
+    }
   };
+
+  // Load saved post IDs from Supabase on mount
+  useEffect(() => {
+    if (posts && posts.length) {
+      doLoadSavedIds().then(ids => {
+        if (ids && ids.length) {
+          setSavedIds(new Set(ids));
+        }
+      });
+    }
+  }, [posts?.length]);
 
   // Initialize reaction counts from DB when posts load
   useEffect(() => {

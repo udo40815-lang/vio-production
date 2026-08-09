@@ -1,13 +1,34 @@
 // ============================================================================
 // Vio — Saved Posts Service
-// CRUD operations on the public.saved_posts table.
+// CRUD operations on public.saved_posts table.
 // Saved posts are private — only the owner can see their saves (RLS enforced).
+// UNIQUE(post_id, user_id) prevents duplicate saves.
 // ============================================================================
 
 import { supabase } from './supabase.js';
 
 /**
+ * Get all saved post IDs for the current user (efficient batch query).
+ * Use this to determine which posts are saved when loading the feed.
+ * @returns {{ savedIds: string[], error }}
+ */
+export async function getMySavedIds() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { savedIds: [], error: null };
+
+  const { data, error } = await supabase
+    .from('saved_posts')
+    .select('post_id')
+    .eq('user_id', user.id);
+
+  if (error) return { savedIds: [], error };
+
+  return { savedIds: (data || []).map(r => r.post_id), error: null };
+}
+
+/**
  * Toggle save on a post.
+ * Uses the database UNIQUE constraint to prevent duplicates.
  * @param {string} postId
  * @returns {{ saved: boolean, error }}
  */
@@ -24,20 +45,34 @@ export async function toggleSave(postId) {
     .maybeSingle();
 
   if (existing) {
-    // Unsave
+    // Unsave — delete the record
     const { error } = await supabase
       .from('saved_posts')
       .delete()
       .eq('id', existing.id);
-    return { saved: false, error };
+
+    if (error) {
+      console.error('[Vio] Failed to unsave post:', error);
+      return { saved: true, error }; // still saved because delete failed
+    }
+    return { saved: false, error: null };
   }
 
-  // Save
+  // Save — insert new record (UNIQUE constraint prevents duplicates)
   const { error } = await supabase
     .from('saved_posts')
     .insert({ post_id: postId, user_id: user.id });
 
-  return { saved: !error, error };
+  if (error) {
+    // If it's a duplicate (race condition), treat as saved
+    if (error.code === '23505') {
+      return { saved: true, error: null };
+    }
+    console.error('[Vio] Failed to save post:', error);
+    return { saved: false, error };
+  }
+
+  return { saved: true, error: null };
 }
 
 /**
@@ -66,7 +101,7 @@ export async function getSavedPosts({ limit = 50, offset = 0 } = {}) {
 }
 
 /**
- * Check if current user has saved a post.
+ * Check if current user has saved a specific post.
  * @param {string} postId
  * @returns {{ saved: boolean, error }}
  */

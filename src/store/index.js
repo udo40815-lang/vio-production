@@ -5,7 +5,7 @@ export {
   doUpdateProfile, doUploadAvatar, doUploadCover, doCreatePost,
   loadFeed, doDeletePost, doUpdatePost, doSearch,
   doLikePost, doReact, doLoadLikes, doGetPostLikers, doAddComment, doDeleteComment,
-  doToggleSave, doLoadSavedPosts,
+  doToggleSave, doLoadSavedPosts, doLoadSavedIds,
   doToggleFollow, doCheckFollow, doGetFollowers, doGetFollowing,
   doCreateNotification, doLoadNotifications, doMarkAsRead, doMarkAllAsRead, doClearNotifications,
   doLoadTransactionHistory, doRefreshBalance, doEarnVicoins,
