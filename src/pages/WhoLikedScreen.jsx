@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ThumbsUp, Heart, Smile, X } from 'lucide-react';
+import { ThumbsUp, Heart, X } from 'lucide-react';
 import Avatar from '../components/ui/Avatar.jsx';
 import { REACTION_CONFIG, REACTIONS, getPostLikers } from '../lib/reactions.js';
 import { V } from '../utils/design-system.js';
@@ -7,7 +7,6 @@ import { V } from '../utils/design-system.js';
 const REACTION_ICON_MAP = {
   like: { icon: ThumbsUp, color: '#3B82F6' },
   love: { icon: Heart,    color: '#EF4444' },
-  haha: { icon: Smile,    color: '#F59E0B' },
 };
 
 const ALL_TABS = [

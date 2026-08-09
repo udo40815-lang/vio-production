@@ -1,26 +1,24 @@
 // ============================================================================
 // Vio — Reactions Service
-// Reactions: like, love, haha
+// Reactions: like, love
 // One reaction per user per post. Choosing another replaces. Same → remove.
 // UNIQUE(post_id, user_id) prevents duplicates at DB level.
 // ============================================================================
 
 import { supabase } from './supabase.js';
 
-export const REACTIONS = ['like', 'love', 'haha'];
+export const REACTIONS = ['like', 'love'];
 
 // Reaction icon keys map to lucide icon names for the component layer.
-// The DB stores 'like', 'love', 'haha' — no change.
+// The DB stores 'like', 'love'.
 export const REACTION_ICONS = {
   like: 'ThumbsUp',
   love: 'Heart',
-  haha: 'Smile',
 };
 
 export const REACTION_CONFIG = {
   like: { icon: 'ThumbsUp', label: 'Like', color: '#3B82F6' },
   love: { icon: 'Heart',    label: 'Love', color: '#EF4444' },
-  haha: { icon: 'Smile',    label: 'Haha', color: '#F59E0B' },
 };
 
 /**

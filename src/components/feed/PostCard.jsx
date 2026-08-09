@@ -1,6 +1,6 @@
 import React, { useState, memo, useCallback, useRef } from 'react';
 import ReactionPicker from './ReactionPicker.jsx';
-import { MessageCircle, Share2, Bookmark, MoreHorizontal, Check, Edit3, Trash2, Copy, Flag, Send, Loader2, ThumbsUp, Heart, Smile } from 'lucide-react';
+import { MessageCircle, Share2, Bookmark, MoreHorizontal, Check, Edit3, Trash2, Copy, Flag, Send, Loader2, ThumbsUp, Heart } from 'lucide-react';
 import { V, safe, fmt, timeAgo, gradientStyle } from '../../utils/design-system.js';
 import Avatar from '../ui/Avatar.jsx';
 import PostGradientMedia from './PostGradientMedia.jsx';
@@ -12,7 +12,6 @@ import { getPostComments } from '../../lib/comments.js';
 const REACTION_ICON_MAP = {
   like: { icon: ThumbsUp, color: '#3B82F6', label: 'Like' },
   love: { icon: Heart,    color: '#EF4444', label: 'Love' },
-  haha: { icon: Smile,    color: '#F59E0B', label: 'Haha' },
 };
 
 function PostCard({ post, ui, likesCount, reactionCounts, myReaction, onLike, onReact, onLikeCountClick, onSave, onEdit, onDelete, isOwn }) {

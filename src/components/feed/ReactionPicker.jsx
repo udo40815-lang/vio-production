@@ -1,11 +1,10 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { ThumbsUp, Heart, Smile } from 'lucide-react';
+import { ThumbsUp, Heart } from 'lucide-react';
 import { V } from '../../utils/design-system.js';
 
 const REACTIONS = [
   { key: 'like', icon: ThumbsUp, label: 'Like', color: '#3B82F6' },
   { key: 'love', icon: Heart,    label: 'Love', color: '#EF4444' },
-  { key: 'haha', icon: Smile,    label: 'Haha', color: '#F59E0B' },
 ];
 
 export default function ReactionPicker({ onSelect, onClose }) {

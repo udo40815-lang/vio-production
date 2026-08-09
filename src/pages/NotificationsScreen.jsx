@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { V, safe, fmt, timeAgo, gradientStyle, softGradientStyle } from '../utils/design-system.js';
-import { Bell, BellRing, Heart, MessageCircle, TrendingUp, Award, UserPlus, Loader2, ThumbsUp, Smile } from 'lucide-react';
+import { Bell, BellRing, Heart, MessageCircle, TrendingUp, Award, UserPlus, Loader2, ThumbsUp } from 'lucide-react';
 import EmptyState from '../components/ui/EmptyState.jsx';
 import Avatar from '../components/ui/Avatar.jsx';
 import { useVioStore, doLoadNotifications, doMarkAsRead, doMarkAllAsRead, doClearNotifications } from '../store/index.js';
@@ -8,11 +8,10 @@ import { useVioStore, doLoadNotifications, doMarkAsRead, doMarkAllAsRead, doClea
 const REACTION_NOTIF_ICONS = {
   like: { icon: ThumbsUp, color: '#3B82F6' },
   love: { icon: Heart,    color: '#EF4444' },
-  haha: { icon: Smile,    color: '#F59E0B' },
 };
 
 const REACTION_NOTIF_LABELS = {
-  like: 'Like', love: 'Love', haha: 'Haha',
+  like: 'Like', love: 'Love',
 };
 
 function NotificationsScreen({ ui, onViewProfile }) {
