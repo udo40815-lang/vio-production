@@ -6,6 +6,7 @@
 // ============================================================================
 
 import { supabase } from './supabase.js';
+import { V } from '../utils/design-system.js';
 
 export const REACTIONS = ['like', 'love'];
 
