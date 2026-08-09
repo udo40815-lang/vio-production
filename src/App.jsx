@@ -146,7 +146,7 @@ export default function App() {
   };
 
   return (
-    <div style={{ background: t.bg, minHeight: '100vh', color: textPrimary }} className="antialiased font-sans">
+    <div style={{ background: t.bg, minHeight: '100vh', color: t.textPrimary }} className="antialiased font-sans">
       {/* Ambient background orbs */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden>
       </div>
