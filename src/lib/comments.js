@@ -34,6 +34,7 @@ export async function addComment(postId, content, parentId = null) {
       user_id: user.id,
       author_handle: profile?.username || 'user',
       author_name: profile?.display_name || profile?.username || 'Creator',
+      author_avatar_url: profile?.avatar_url || null,
       content: content.trim(),
       parent_id: parentId || null,
     })

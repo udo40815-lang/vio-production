@@ -306,13 +306,14 @@ function PostCard({ post, ui, likesCount, reactionCounts, myReaction, onLike, on
             <div className="space-y-3 mb-3 pt-2">
               {comments.map((c) => (
                 <div key={c.id} className="flex gap-2">
-                  <Avatar handle={c.author_handle} name={c.author_name} src={c.author_avatar_url || undefined} size={26} />
+                  <Avatar handle={c.author_handle} name={c.author_name} src={c.author_avatar_url || undefined} size={28} />
                   <div className="flex-1 min-w-0">
-                    <div>
-                      <span className="text-[12px] font-semibold mr-1" style={{ color: ui.textPrimary }}>{c.author_name || c.author_handle}</span>
-                      <span className="text-[13px] leading-snug break-words" style={{ color: ui.textPrimary }}>{c.content}</span>
+                    <div className="flex items-baseline gap-1 flex-wrap">
+                      <span className="text-[12px] font-semibold" style={{ color: ui.textPrimary }}>{c.author_name || c.author_handle}</span>
+                      <span className="text-[11px]" style={{ color: ui.textMuted }}>@{c.author_handle}</span>
                     </div>
-                    <div className="flex items-center gap-3 mt-0.5">
+                    <div className="text-[13px] leading-snug break-words mt-0.5" style={{ color: ui.textPrimary }}>{c.content}</div>
+                    <div className="flex items-center gap-3 mt-1">
                       <span className="text-[10px]" style={{ color: ui.textMuted }}>{timeAgo(c.created_at)}</span>
                       {(c.user_id === ui.currentUserId) && <button onClick={() => handleDeleteComment(c.id)} className="text-[10px] font-medium hover:underline" style={{ color: V.red + 'aa', background: 'none', border: 'none', cursor: 'pointer' }}>Delete</button>}
                     </div>
@@ -320,13 +321,14 @@ function PostCard({ post, ui, likesCount, reactionCounts, myReaction, onLike, on
                       <div className="mt-2 space-y-2 pl-4" style={{ borderLeft: `2px solid ${ui.border}` }}>
                         {c.replies.map((r) => (
                           <div key={r.id} className="flex gap-2">
-                            <Avatar handle={r.author_handle} name={r.author_name} src={r.author_avatar_url || undefined} size={20} />
+                            <Avatar handle={r.author_handle} name={r.author_name} src={r.author_avatar_url || undefined} size={22} />
                             <div className="flex-1 min-w-0">
-                              <div>
-                                <span className="text-[11px] font-semibold mr-1" style={{ color: ui.textPrimary }}>{r.author_name || r.author_handle}</span>
-                                <span className="text-[12px] leading-snug break-words" style={{ color: ui.textPrimary }}>{r.content}</span>
+                              <div className="flex items-baseline gap-1 flex-wrap">
+                                <span className="text-[11px] font-semibold" style={{ color: ui.textPrimary }}>{r.author_name || r.author_handle}</span>
+                                <span className="text-[10px]" style={{ color: ui.textMuted }}>@{r.author_handle}</span>
                               </div>
-                              <div className="flex items-center gap-3 mt-0.5">
+                              <div className="text-[12px] leading-snug break-words mt-0.5" style={{ color: ui.textPrimary }}>{r.content}</div>
+                              <div className="flex items-center gap-3 mt-1">
                                 <span className="text-[9px]" style={{ color: ui.textMuted }}>{timeAgo(r.created_at)}</span>
                                 {(r.user_id === ui.currentUserId) && <button onClick={() => handleDeleteComment(r.id)} className="text-[9px] font-medium hover:underline" style={{ color: V.red + 'aa', background: 'none', border: 'none', cursor: 'pointer' }}>Delete</button>}
                               </div>
