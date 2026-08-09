@@ -2,6 +2,9 @@
 // Vio — Comments Service
 // CRUD operations on the public.comments table.
 // Supports nested replies via the parent_id field.
+//
+// NOTE: author_handle and author_name are stored directly on each comment row
+// at insert time — no join to profiles is needed for display.
 // ============================================================================
 
 import { supabase } from './supabase.js';
@@ -17,9 +20,10 @@ export async function addComment(postId, content, parentId = null) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { comment: null, error: new Error('Not authenticated') };
 
+  // Fetch the current user's profile for author metadata
   const { data: profile } = await supabase
     .from('profiles')
-    .select('username, display_name')
+    .select('username, display_name, avatar_url')
     .eq('user_id', user.id)
     .single();
 
@@ -36,53 +40,74 @@ export async function addComment(postId, content, parentId = null) {
     .select('*')
     .single();
 
-  // Increment post comment count
-  if (!error) {
-    await supabase.rpc('increment_comments', { post_id: postId });
+  if (error) {
+    console.error('[Vio] Failed to insert comment:', error);
+    return { comment: null, error };
   }
 
-  return { comment: data, error };
+  // Update post comment count — use a direct count-based update
+  // This is more robust than an RPC that may not exist
+  try {
+    const { count: newCount } = await supabase
+      .from('comments')
+      .select('*', { count: 'exact', head: true })
+      .eq('post_id', postId);
+
+    if (newCount !== null) {
+      await supabase
+        .from('posts')
+        .update({ comments_count: newCount })
+        .eq('id', postId);
+    }
+  } catch (countErr) {
+    // Non-critical — the comment itself was saved successfully
+    console.warn('[Vio] Could not update post comment count:', countErr);
+  }
+
+  return { comment: data, error: null };
 }
 
 /**
  * Get all comments for a post, ordered by creation time.
  * Includes nested replies.
+ * IMPORTANT: author_handle and author_name are stored on each comment row,
+ * so no database join is required.
  * @param {string} postId
  * @returns {{ comments: [], error }}
  */
 export async function getPostComments(postId) {
   const { data, error } = await supabase
     .from('comments')
-    .select('*, profiles!comments_user_id_fkey(username, display_name, avatar_url)')
+    .select('*')
     .eq('post_id', postId)
     .order('created_at', { ascending: true });
 
-  // Flatten profile data into each comment for live sync
-  const enriched = (data || []).map(c => ({
-    ...c,
-    author_handle: c.profiles?.username || c.author_handle || 'unknown',
-    author_name: c.profiles?.display_name || c.author_name || 'Unknown',
-    author_avatar_url: c.profiles?.avatar_url || '',
-  }));
+  if (error) {
+    console.error('[Vio] Failed to fetch comments:', error);
+    return { comments: [], error };
+  }
+
+  if (!data || !data.length) {
+    return { comments: [], error: null };
+  }
 
   // Organize into threads: top-level comments + nested replies
-  if (!enriched.length) return { comments: [], error };
-
-  const topLevel = enriched.filter(c => !c.parent_id);
-  const replies = enriched.filter(c => c.parent_id);
+  const topLevel = data.filter(c => !c.parent_id);
+  const replies = data.filter(c => c.parent_id);
 
   const threaded = topLevel.map(comment => ({
     ...comment,
     replies: replies.filter(r => r.parent_id === comment.id),
   }));
 
-  return { comments: threaded, error };
+  return { comments: threaded, error: null };
 }
 
 /**
  * Delete a comment (only owner can delete via RLS).
+ * Updates the post comment count after deletion.
  * @param {string} commentId
- * @param {string} postId — needed to decrement count
+ * @param {string} postId — needed to update count
  * @returns {{ error }}
  */
 export async function deleteComment(commentId, postId) {
@@ -91,11 +116,31 @@ export async function deleteComment(commentId, postId) {
     .delete()
     .eq('id', commentId);
 
-  if (!error && postId) {
-    await supabase.rpc('decrement_comments', { post_id: postId });
+  if (error) {
+    console.error('[Vio] Failed to delete comment:', error);
+    return { error };
   }
 
-  return { error };
+  // Update post comment count
+  if (postId) {
+    try {
+      const { count: newCount } = await supabase
+        .from('comments')
+        .select('*', { count: 'exact', head: true })
+        .eq('post_id', postId);
+
+      if (newCount !== null) {
+        await supabase
+          .from('posts')
+          .update({ comments_count: newCount })
+          .eq('id', postId);
+      }
+    } catch (countErr) {
+      console.warn('[Vio] Could not update post comment count after delete:', countErr);
+    }
+  }
+
+  return { error: null };
 }
 
 /**
