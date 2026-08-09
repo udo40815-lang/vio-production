@@ -259,8 +259,8 @@ function PostCard({ post, ui, likesCount, reactionCounts, myReaction, onLike, on
             <Bookmark
               size={18}
               strokeWidth={2}
-              color={onSave ? V.gold : (ui.dark ? 'rgba(248,250,252,0.55)' : 'rgba(15,18,38,0.45)')}
-              fill={onSave ? V.gold : 'transparent'}
+              color={onSave ? (ui.dark ? '#FFFFFF' : V.royal) : (ui.dark ? 'rgba(248,250,252,0.55)' : 'rgba(15,18,38,0.45)')}
+              fill={onSave ? (ui.dark ? '#FFFFFF' : V.royal) : 'transparent'}
             />
           </button>
         </div>

@@ -1,12 +1,11 @@
 import React from 'react';
-import { Home, Compass, Plus, Search, User, Bookmark } from 'lucide-react';
+import { Home, Compass, Plus, Search, User } from 'lucide-react';
 import { gradientStyle, V } from '../../utils/design-system.js';
 
 function BottomNav({ tab, setTab, dark, onProfileClick }) {
   const items = [
     { id: 'home', label: 'Home', icon: Home },
     { id: 'discover', label: 'Discover', icon: Compass },
-    { id: 'saved', label: 'Saved', icon: Bookmark },
     { id: 'create', label: 'Create', icon: Plus, primary: true },
     { id: 'search', label: 'Search', icon: Search },
     { id: 'profile', label: 'You', icon: User },
