@@ -5,7 +5,7 @@ import { REACTION_CONFIG, REACTIONS, getPostLikers } from '../lib/reactions.js';
 import { V } from '../utils/design-system.js';
 
 const REACTION_ICON_MAP = {
-  like: { icon: ThumbsUp, color: '#3B82F6' },
+  like: { icon: ThumbsUp, color: V.royal },
   love: { icon: Heart,    color: '#EF4444' },
 };
 
@@ -107,7 +107,7 @@ function WhoLikedScreen({ post, ui, onClose }) {
                   <div style={{ fontSize: 12, color: ui.textMuted }}>@{liker.username}</div>
                 </div>
                 <div style={{ flexShrink: 0 }}>
-                  <ReactionIcon size={20} color={reactionData?.color || '#3B82F6'} fill={reactionData?.color || '#3B82F6'} strokeWidth={2} />
+                  <ReactionIcon size={20} color={reactionData?.color || V.royal} fill={reactionData?.color || V.royal} strokeWidth={2} />
                 </div>
                 {liker.user_id !== (ui?.currentUserId) && (
                   <button style={{ fontSize: 12, fontWeight: 600, padding: '5px 12px', borderRadius: 8, background: V.royal, color: '#fff', border: 'none', cursor: 'pointer', flexShrink: 0 }}>

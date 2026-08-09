@@ -6,7 +6,7 @@ import Avatar from '../components/ui/Avatar.jsx';
 import { useVioStore, doLoadNotifications, doMarkAsRead, doMarkAllAsRead, doClearNotifications } from '../store/index.js';
 
 const REACTION_NOTIF_ICONS = {
-  like: { icon: ThumbsUp, color: '#3B82F6' },
+  like: { icon: ThumbsUp, color: V.royal },
   love: { icon: Heart,    color: '#EF4444' },
 };
 
@@ -25,7 +25,7 @@ function NotificationsScreen({ ui, onViewProfile }) {
 
   const notifIcon = (kind) => {
     switch (kind) {
-      case 'like': return <ThumbsUp size={14} color="#3B82F6" strokeWidth={2} />;
+      case 'like': return <ThumbsUp size={14} color={V.royal} strokeWidth={2} />;
       case 'comment': return <MessageCircle size={14} color={V.royal} />;
       case 'reply': return <MessageCircle size={14} color={V.electric} />;
       case 'follow': return <UserPlus size={14} color={V.gold} />;

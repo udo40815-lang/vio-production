@@ -3,7 +3,7 @@ import { ThumbsUp, Heart } from 'lucide-react';
 import { V } from '../../utils/design-system.js';
 
 const REACTIONS = [
-  { key: 'like', icon: ThumbsUp, label: 'Like', color: '#3B82F6' },
+  { key: 'like', icon: ThumbsUp, label: 'Like', color: V.royal },
   { key: 'love', icon: Heart,    label: 'Love', color: '#EF4444' },
 ];
 

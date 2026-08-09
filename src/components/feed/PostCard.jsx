@@ -10,7 +10,7 @@ import { getPostComments } from '../../lib/comments.js';
 
 // Icon map for reactions — keyed by the same DB values
 const REACTION_ICON_MAP = {
-  like: { icon: ThumbsUp, color: '#3B82F6', label: 'Like' },
+  like: { icon: ThumbsUp, color: V.royal, label: 'Like' },
   love: { icon: Heart,    color: '#EF4444', label: 'Love' },
 };
 
@@ -206,14 +206,14 @@ function PostCard({ post, ui, likesCount, reactionCounts, myReaction, onLike, on
                 ) : (
                   <ThumbsUp
                     size={18}
-                    color={ui.dark ? 'rgba(248,250,252,0.55)' : 'rgba(15,18,38,0.45)'}
+                    color={ui.textSecondary}
                     strokeWidth={2}
                   />
                 )}
                 <span style={{
                   fontSize: '13px',
                   fontWeight: 500,
-                  color: currentReaction ? currentReaction.color : (ui.dark ? 'rgba(248,250,252,0.55)' : 'rgba(15,18,38,0.45)'),
+                  color: currentReaction ? currentReaction.color : ui.textSecondary,
                 }}>
                   {currentReaction ? currentReaction.label : 'Like'}
                 </span>
@@ -234,8 +234,8 @@ function PostCard({ post, ui, likesCount, reactionCounts, myReaction, onLike, on
               aria-label={`Comment. ${post.comments_count || 0} comments`}
               style={{ background: 'none', border: 'none', padding: '6px 8px', display: 'flex', alignItems: 'center', gap: '6px', borderRadius: '24px' }}
             >
-              <MessageCircle size={18} style={{ color: ui.dark ? 'rgba(248,250,252,0.55)' : 'rgba(15,18,38,0.45)' }} strokeWidth={2} />
-              <span style={{ fontSize: '13px', fontWeight: 500, color: ui.dark ? 'rgba(248,250,252,0.55)' : 'rgba(15,18,38,0.45)' }}>Comment</span>
+              <MessageCircle size={18} style={{ color: ui.textSecondary }} strokeWidth={2} />
+              <span style={{ fontSize: '13px', fontWeight: 500, color: ui.textSecondary }}>Comment</span>
             </button>
 
             {/* Share button */}
@@ -245,8 +245,8 @@ function PostCard({ post, ui, likesCount, reactionCounts, myReaction, onLike, on
               onClick={() => navigator.share?.({ url: `${window.location.origin}/post/${post.id}` }) || {}}
               style={{ background: 'none', border: 'none', padding: '6px 8px', display: 'flex', alignItems: 'center', gap: '6px', borderRadius: '24px' }}
             >
-              <Share2 size={18} style={{ color: ui.dark ? 'rgba(248,250,252,0.55)' : 'rgba(15,18,38,0.45)' }} strokeWidth={2} />
-              <span style={{ fontSize: '13px', fontWeight: 500, color: ui.dark ? 'rgba(248,250,252,0.55)' : 'rgba(15,18,38,0.45)' }}>Share</span>
+              <Share2 size={18} style={{ color: ui.textSecondary }} strokeWidth={2} />
+              <span style={{ fontSize: '13px', fontWeight: 500, color: ui.textSecondary }}>Share</span>
             </button>
           </div>
 
@@ -259,7 +259,7 @@ function PostCard({ post, ui, likesCount, reactionCounts, myReaction, onLike, on
             <Bookmark
               size={18}
               strokeWidth={2}
-              color={onSave ? (ui.dark ? '#FFFFFF' : V.royal) : (ui.dark ? 'rgba(248,250,252,0.55)' : 'rgba(15,18,38,0.45)')}
+              color={onSave ? (ui.dark ? '#FFFFFF' : V.royal) : ui.textSecondary}
               fill={onSave ? (ui.dark ? '#FFFFFF' : V.royal) : 'transparent'}
             />
           </button>

@@ -15,7 +15,7 @@ export const REACTION_ICONS = {
 };
 
 export const REACTION_CONFIG = {
-  like: { icon: 'ThumbsUp', label: 'Like', color: '#3B82F6' },
+  like: { icon: 'ThumbsUp', label: 'Like', color: V.royal },
   love: { icon: 'Heart',    label: 'Love', color: '#EF4444' },
 };
 

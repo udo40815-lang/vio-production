@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { AlertTriangle } from 'lucide-react';
-import { V, safe, fmt, timeAgo, gradientStyle, softGradientStyle } from './utils/design-system.js';
+import { V, theme, safe, fmt, timeAgo, gradientStyle, softGradientStyle } from './utils/design-system.js';
 import { useVioStore, setSession, initSession, doSignOut } from './store/index.js';
 import { getSupabaseConfigError } from './lib/supabase.js';
 import SplashScreen from './pages/SplashScreen.jsx';
@@ -98,16 +98,13 @@ export default function App() {
   if (flow === 'splash' || (loading && !initialized)) return <SplashScreen out={splashOut} />;
   if (flow === 'auth') return <AuthScreen dark={dark} setDark={setDark} onAuthed={handleAuthed} />;
 
-  // Main app
-  const bg = dark ? V.dark : V.light;
-  const surface = dark ? V.surfaceDark : '#FFFFFF';
-  const border = dark ? 'rgba(255,255,255,0.06)' : 'rgba(15,18,38,0.06)';
-  const textPrimary = dark ? '#F8FAFC' : V.ink;
-  const textSecondary = dark ? 'rgba(248,250,252,0.60)' : 'rgba(15,18,38,0.58)';
-  const textMuted = dark ? 'rgba(248,250,252,0.40)' : 'rgba(15,18,38,0.42)';
-
+  // Main app — professional light/dark theme
+  const t = theme(dark);
   const uiCtx = {
-    dark, bg, surface, border, textPrimary, textSecondary, textMuted,
+    dark, bg: t.bg, surface: t.surface, surfaceElevated: t.surfaceElevated,
+    border: t.border, textPrimary: t.textPrimary, textSecondary: t.textSecondary,
+    textMuted: t.textMuted, accent: t.accent, accentHover: t.accentHover,
+    icon: t.icon, iconActive: t.iconActive, saveActive: t.saveActive,
     currentUserId: session?.userId || '',
     handle: session.handle,
     displayName: profile.displayName || profile.name,
@@ -149,12 +146,9 @@ export default function App() {
   };
 
   return (
-    <div style={{ background: bg, minHeight: '100vh', color: textPrimary }} className="antialiased font-sans">
+    <div style={{ background: t.bg, minHeight: '100vh', color: textPrimary }} className="antialiased font-sans">
       {/* Ambient background orbs */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden>
-        <div className="absolute -top-40 -left-20 w-[480px] h-[480px] rounded-full opacity-[0.14]" style={{ background: `radial-gradient(closest-side, ${V.royal}, transparent 70%)`, filter: 'blur(30px)' }} />
-        <div className="absolute top-1/3 -right-32 w-[400px] h-[400px] rounded-full opacity-[0.10]" style={{ background: `radial-gradient(closest-side, ${V.gold}, transparent 70%)`, filter: 'blur(30px)' }} />
-        <div className="absolute -bottom-20 left-1/4 w-[320px] h-[320px] rounded-full opacity-[0.08]" style={{ background: `radial-gradient(closest-side, ${V.electric}, transparent 70%)`, filter: 'blur(30px)' }} />
       </div>
 
       <Drawer ui={uiCtx} open={drawerOpen} onClose={() => setDrawerOpen(false)} setTab={setTab} setDark={setDark} onSignOut={handleSignOut} onProfileClick={() => { setViewingUserId(null); setTab("profile"); }} />
