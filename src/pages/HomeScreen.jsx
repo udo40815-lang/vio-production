@@ -21,13 +21,26 @@ function HomeScreen({ ui, posts }) {
   // Handle like with optimistic UI
   const handleLike = async (postId) => {
     const oldReaction = myReactions[postId] || null;
-    const oldTotal = reactionCounts[postId]?.total || 0;
+    const oldCounts = reactionCounts[postId] || { total: 0, top3: [], countsByType: {} };
+    const oldTotal = oldCounts.total;
     if (oldReaction === 'like') {
       setMyReactions(prev => { const n = { ...prev }; delete n[postId]; return n; });
-      setReactionCounts(prev => ({ ...prev, [postId]: { total: Math.max(0, oldTotal - 1), top3: [], countsByType: {} } }));
+      setReactionCounts(prev => ({ ...prev, [postId]: {
+        ...oldCounts, total: Math.max(0, oldTotal - 1),
+        countsByType: { ...(oldCounts.countsByType || {}), like: Math.max(0, (oldCounts.countsByType?.like || 0) - 1) }, top3: [],
+      }}));
+    } else if (oldReaction === 'love') {
+      setMyReactions(prev => ({ ...prev, [postId]: 'like' }));
+      setReactionCounts(prev => ({ ...prev, [postId]: {
+        ...oldCounts,
+        countsByType: { ...(oldCounts.countsByType || {}), love: Math.max(0, (oldCounts.countsByType?.love || 0) - 1), like: (oldCounts.countsByType?.like || 0) + 1 }, top3: [],
+      }}));
     } else {
       setMyReactions(prev => ({ ...prev, [postId]: 'like' }));
-      setReactionCounts(prev => ({ ...prev, [postId]: { total: oldTotal + 1, top3: [], countsByType: {} } }));
+      setReactionCounts(prev => ({ ...prev, [postId]: {
+        ...oldCounts, total: oldTotal + 1,
+        countsByType: { ...(oldCounts.countsByType || {}), like: (oldCounts.countsByType?.like || 0) + 1 }, top3: [],
+      }}));
     }
     const result = await doLikePost(postId);
     if (!result.error) {
@@ -36,18 +49,29 @@ function HomeScreen({ ui, posts }) {
     }
   };
 
-  // Handle specific reaction (from picker)
+  // Handle specific reaction (from picker) — preserves countsByType
   const handleReact = async (postId, reaction) => {
     const oldReaction = myReactions[postId] || null;
-    const oldTotal = reactionCounts[postId]?.total || 0;
+    const oldCounts = reactionCounts[postId] || { total: 0, top3: [], countsByType: {} };
+    const oldTotal = oldCounts.total;
     if (oldReaction === reaction) {
       setMyReactions(prev => { const n = { ...prev }; delete n[postId]; return n; });
-      setReactionCounts(prev => ({ ...prev, [postId]: { total: Math.max(0, oldTotal - 1), top3: [], countsByType: {} } }));
+      setReactionCounts(prev => ({ ...prev, [postId]: {
+        ...oldCounts, total: Math.max(0, oldTotal - 1),
+        countsByType: { ...(oldCounts.countsByType || {}), [reaction]: Math.max(0, (oldCounts.countsByType?.[reaction] || 0) - 1) }, top3: [],
+      }}));
     } else if (oldReaction) {
       setMyReactions(prev => ({ ...prev, [postId]: reaction }));
+      setReactionCounts(prev => ({ ...prev, [postId]: {
+        ...oldCounts,
+        countsByType: { ...(oldCounts.countsByType || {}), [oldReaction]: Math.max(0, (oldCounts.countsByType?.[oldReaction] || 0) - 1), [reaction]: (oldCounts.countsByType?.[reaction] || 0) + 1 }, top3: [],
+      }}));
     } else {
       setMyReactions(prev => ({ ...prev, [postId]: reaction }));
-      setReactionCounts(prev => ({ ...prev, [postId]: { total: oldTotal + 1, top3: [], countsByType: {} } }));
+      setReactionCounts(prev => ({ ...prev, [postId]: {
+        ...oldCounts, total: oldTotal + 1,
+        countsByType: { ...(oldCounts.countsByType || {}), [reaction]: (oldCounts.countsByType?.[reaction] || 0) + 1 }, top3: [],
+      }}));
     }
     const result = await doReact(postId, reaction);
     if (!result.error) {

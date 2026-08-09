@@ -1,7 +1,7 @@
 // ============================================================================
 // Vio — Reactions Service
 // Reactions: like, love
-// One reaction per user per post. Choosing another replaces. Same → remove.
+// Uses atomic toggle_reaction RPC for reliable single-round-trip mutations.
 // UNIQUE(post_id, user_id) prevents duplicates at DB level.
 // ============================================================================
 
@@ -9,8 +9,6 @@ import { supabase } from './supabase.js';
 
 export const REACTIONS = ['like', 'love'];
 
-// Reaction icon keys map to lucide icon names for the component layer.
-// The DB stores 'like', 'love'.
 export const REACTION_ICONS = {
   like: 'ThumbsUp',
   love: 'Heart',
@@ -22,81 +20,51 @@ export const REACTION_CONFIG = {
 };
 
 /**
- * Toggle or set a reaction on a post.
- * If same reaction exists → remove it.
- * If different reaction exists → replace it.
- * If no reaction → create it.
+ * Atomic toggle: sets or removes a reaction on a post.
+ * Uses the toggle_reaction SECURITY DEFINER RPC for a single atomic operation.
+ *
+ * @param {string} postId
+ * @param {string} reaction — 'like' or 'love'
  * @returns {{ reaction: string|null, error }}
  */
 export async function toggleReaction(postId, reaction) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { reaction: null, error: new Error('Not authenticated') };
 
-  const { data: existing } = await supabase
-    .from('reactions')
-    .select('id, reaction')
-    .eq('post_id', postId)
-    .eq('user_id', user.id)
-    .maybeSingle();
+  const { data, error } = await supabase.rpc('toggle_reaction', {
+    p_post_id: postId,
+    p_user_id: user.id,
+    p_reaction: reaction,
+  });
 
-  if (existing) {
-    if (existing.reaction === reaction) {
-      // Same reaction — remove
-      const { error } = await supabase
-        .from('reactions')
-        .delete()
-        .eq('id', existing.id);
-      if (error) return { reaction: null, error };
-      return { reaction: null, error: null };
-    }
-    // Different reaction — replace
-    const { error } = await supabase
-      .from('reactions')
-      .update({ reaction, updated_at: new Date().toISOString() })
-      .eq('id', existing.id);
-    if (error) return { reaction: null, error };
-    return { reaction, error: null };
+  if (error) {
+    console.error('[Vio] toggle_reaction RPC failed:', error);
+    return { reaction: null, error };
   }
 
-  // New reaction
-  const { error } = await supabase
-    .from('reactions')
-    .insert({ post_id: postId, user_id: user.id, reaction });
-  if (error) return { reaction: null, error };
-  return { reaction, error: null };
+  // data is the resulting reaction ('like', 'love', or null)
+  return { reaction: data || null, error: null };
 }
 
 /**
- * Simple like toggle (single-tap). Uses 'like' as default reaction.
+ * Simple like toggle (single-tap on the like button).
+ * Toggles 'like' using the atomic RPC.
  */
 export async function toggleLike(postId) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { liked: false, error: new Error('Not authenticated') };
 
-  const { data: existing } = await supabase
-    .from('reactions')
-    .select('id')
-    .eq('post_id', postId)
-    .eq('user_id', user.id)
-    .maybeSingle();
+  const { data, error } = await supabase.rpc('toggle_reaction', {
+    p_post_id: postId,
+    p_user_id: user.id,
+    p_reaction: 'like',
+  });
 
-  if (existing) {
-    const { error } = await supabase
-      .from('reactions')
-      .delete()
-      .eq('id', existing.id);
-    if (error) return { liked: false, error };
-    return { liked: false, error: null };
-  }
-
-  const { error } = await supabase
-    .from('reactions')
-    .insert({ post_id: postId, user_id: user.id, reaction: 'like' });
   if (error) return { liked: false, error };
-  return { liked: true, error: null };
+  return { liked: data === 'like', error: null };
 }
 
-/** Get current user's reactions for multiple posts (batched). Returns { postId: reactionType }. */
+/** Get current user's reactions for multiple posts (batched). */
 export async function getMyReactions(postIds) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user || !postIds.length) return { reactions: {}, error: null };
@@ -114,7 +82,7 @@ export async function getMyReactions(postIds) {
   return { reactions: map, error: null };
 }
 
-/** Get total like/reaction counts for multiple posts (batched). */
+/** Get reaction counts for multiple posts (batched). */
 export async function getReactionCounts(postIds) {
   if (!postIds.length) return { counts: {}, error: null };
 

@@ -254,54 +254,91 @@ export async function doSearch(query) {
 // ---------------------------------------------------------------------------
 // Likes
 // ---------------------------------------------------------------------------
-// Legacy: simple like toggle (used by single-tap on the like button)
 export async function doLikePost(postId) {
   const oldReaction = localMyReactions[postId] || null;
-  const oldTotal = localReactionCounts[postId]?.total || 0;
+  const oldCounts = localReactionCounts[postId] || { total: 0, top3: [], countsByType: {} };
+  const oldTotal = oldCounts.total;
+
   // Optimistic: toggle like
   if (oldReaction === 'like') {
     delete localMyReactions[postId];
-    localReactionCounts[postId] = { total: Math.max(0, oldTotal - 1), top3: [], countsByType: {} };
+    localReactionCounts[postId] = {
+      ...oldCounts,
+      total: Math.max(0, oldTotal - 1),
+      countsByType: { ...(oldCounts.countsByType || {}), like: Math.max(0, (oldCounts.countsByType?.like || 0) - 1) },
+      top3: [],
+    };
   } else {
+    // If switching from love to like, remove love from counts
+    if (oldReaction === 'love') {
+      localReactionCounts[postId] = {
+        ...oldCounts,
+        countsByType: { ...(oldCounts.countsByType || {}), love: Math.max(0, (oldCounts.countsByType?.love || 0) - 1), like: (oldCounts.countsByType?.like || 0) + 1 },
+        top3: [],
+      };
+    } else {
+      localReactionCounts[postId] = {
+        ...oldCounts,
+        total: oldTotal + 1,
+        countsByType: { ...(oldCounts.countsByType || {}), like: (oldCounts.countsByType?.like || 0) + 1 },
+        top3: [],
+      };
+    }
     localMyReactions[postId] = 'like';
-    localReactionCounts[postId] = { total: oldTotal + 1, top3: [], countsByType: {} };
   }
   emit();
 
   const result = await toggleLike(postId);
   if (result.error) {
+    // Rollback
     localMyReactions[postId] = oldReaction || undefined;
-    localReactionCounts[postId] = { total: oldTotal, top3: [], countsByType: {} };
+    localReactionCounts[postId] = oldCounts;
     emit();
     return result;
   }
   const { counts: freshCounts } = await getReactionCounts([postId]);
-  if (freshCounts[postId]) {
-    localReactionCounts[postId] = freshCounts[postId];
-  } else {
-    localReactionCounts[postId] = { total: 0, top3: [], countsByType: {} };
-  }
-  const exactCount = freshCounts[postId]?.total || 0;
+  if (freshCounts[postId]) localReactionCounts[postId] = freshCounts[postId];
+  else localReactionCounts[postId] = { total: 0, top3: [], countsByType: {} };
   emit();
-  return { ...result, count: exactCount };
+  return { ...result, count: freshCounts[postId]?.total || 0 };
 }
 
-// New: set a specific reaction
 export async function doReact(postId, reaction) {
   const oldReaction = localMyReactions[postId] || null;
-  const oldTotal = localReactionCounts[postId]?.total || 0;
+  const oldCounts = localReactionCounts[postId] || { total: 0, top3: [], countsByType: {} };
+  const oldTotal = oldCounts.total;
+
   // Optimistic
   if (oldReaction === reaction) {
     // Same reaction → remove
     delete localMyReactions[postId];
-    localReactionCounts[postId] = { total: Math.max(0, oldTotal - 1), top3: [], countsByType: {} };
+    localReactionCounts[postId] = {
+      ...oldCounts,
+      total: Math.max(0, oldTotal - 1),
+      countsByType: { ...(oldCounts.countsByType || {}), [reaction]: Math.max(0, (oldCounts.countsByType?.[reaction] || 0) - 1) },
+      top3: [],
+    };
   } else if (oldReaction) {
-    // Different reaction → replace (count stays same)
+    // Different reaction → replace (total unchanged, swap counts)
     localMyReactions[postId] = reaction;
+    localReactionCounts[postId] = {
+      ...oldCounts,
+      countsByType: {
+        ...(oldCounts.countsByType || {}),
+        [oldReaction]: Math.max(0, (oldCounts.countsByType?.[oldReaction] || 0) - 1),
+        [reaction]: (oldCounts.countsByType?.[reaction] || 0) + 1,
+      },
+      top3: [],
+    };
   } else {
     // New reaction
     localMyReactions[postId] = reaction;
-    localReactionCounts[postId] = { total: oldTotal + 1, top3: [], countsByType: {} };
+    localReactionCounts[postId] = {
+      ...oldCounts,
+      total: oldTotal + 1,
+      countsByType: { ...(oldCounts.countsByType || {}), [reaction]: (oldCounts.countsByType?.[reaction] || 0) + 1 },
+      top3: [],
+    };
   }
   emit();
 
@@ -310,19 +347,15 @@ export async function doReact(postId, reaction) {
     // Rollback
     if (oldReaction) localMyReactions[postId] = oldReaction;
     else delete localMyReactions[postId];
-    localReactionCounts[postId] = { total: oldTotal, top3: [], countsByType: {} };
+    localReactionCounts[postId] = oldCounts;
     emit();
     return result;
   }
   const { counts: freshCounts } = await getReactionCounts([postId]);
-  if (freshCounts[postId]) {
-    localReactionCounts[postId] = freshCounts[postId];
-  } else {
-    localReactionCounts[postId] = { total: 0, top3: [], countsByType: {} };
-  }
-  const exactCount = freshCounts[postId]?.total || 0;
+  if (freshCounts[postId]) localReactionCounts[postId] = freshCounts[postId];
+  else localReactionCounts[postId] = { total: 0, top3: [], countsByType: {} };
   emit();
-  return { ...result, count: exactCount };
+  return { ...result, count: freshCounts[postId]?.total || 0 };
 }
 
 export async function doLoadLikes(postIds) {
