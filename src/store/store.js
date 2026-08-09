@@ -441,6 +441,16 @@ export async function doLoadSavedIds() {
   return savedIds;
 }
 
+/**
+ * Get full saved post data (for the Saved posts screen).
+ * Returns the complete post objects with saved_at timestamps.
+ */
+export async function doGetSavedPostsFull() {
+  const result = await getSavedPosts({ limit: 200 });
+  emit();
+  return result;
+}
+
 // ---------------------------------------------------------------------------
 // Notifications
 // ---------------------------------------------------------------------------

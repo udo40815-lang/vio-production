@@ -19,6 +19,7 @@ import WalletScreen from './pages/WalletScreen.jsx';
 import NotificationsScreen from './pages/NotificationsScreen.jsx';
 import SettingsScreen from './pages/SettingsScreen.jsx';
 import LegalScreen from './pages/LegalScreen.jsx';
+import SavedScreen from './pages/SavedScreen.jsx';
 import TopRail from './components/navigation/TopRail.jsx';
 import Drawer from './components/navigation/Drawer.jsx';
 import BottomNav from './components/navigation/BottomNav.jsx';
@@ -144,6 +145,7 @@ export default function App() {
     notifications: <NotificationsScreen ui={uiCtx} onViewProfile={handleViewProfile} />,
     settings:      <SettingsScreen ui={uiCtx} setDark={setDark} />,
     legal:         <LegalScreen ui={uiCtx} activePage="tos" />,
+    saved:         <SavedScreen ui={uiCtx} onViewProfile={handleViewProfile} />,
   };
 
   return (

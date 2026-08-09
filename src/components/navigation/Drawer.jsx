@@ -1,5 +1,5 @@
 import React from 'react';
-import { User, Coins, Settings, Bell, Sun, Languages, EyeOff, BookOpen, Shield, FileText, LockKeyhole, Info, Flag, ChevronRight, LogOut } from 'lucide-react';
+import { User, Coins, Settings, Bell, Sun, Languages, EyeOff, BookOpen, Shield, FileText, LockKeyhole, Info, Flag, ChevronRight, LogOut, Bookmark } from 'lucide-react';
 import { V, gradientStyle } from '../../utils/design-system.js';
 import VioMark from '../ui/VioMark.jsx';
 
@@ -10,6 +10,7 @@ function Drawer({ ui, open, onClose, setTab, setDark, onSignOut, onProfileClick 
       { icon: Coins, label: 'Wallet', action: 'wallet' },
       { icon: Settings, label: 'Settings', action: 'settings' },
       { icon: Bell, label: 'Notifications', action: 'notifications' },
+      { icon: Bookmark, label: 'Saved Posts', action: 'saved' },
     ]},
     { label: 'Preferences', items: [
       { icon: Sun, label: 'Appearance', action: 'theme' },
@@ -33,6 +34,7 @@ function Drawer({ ui, open, onClose, setTab, setDark, onSignOut, onProfileClick 
     else if (action === 'settings') setTab('settings');
     else if (action === 'theme') setDark(!ui.dark);
     else if (action === 'notifications') setTab('notifications');
+    else if (action === 'saved') setTab('saved');
     else if (action === 'wallet') setTab('wallet');
     else if (action && action.startsWith('legal:')) {
       // Store the legal sub-page for LegalScreen to read
