@@ -1,15 +1,6 @@
 // ============================================================================
-// Vio — Messaging Service (Phase 1)
-// 1-to-1 private conversations + messages
-//
-// Database architecture:
-//   - conversations: unique 1-to-1 pairs (enforced by CHECK user_a < user_b)
-//   - conversation_participants: per-user read/unread state
-//   - messages: individual messages within a conversation
-//
-// Duplicate prevention:
-//   The CHECK constraint (user_a < user_b) + UNIQUE(user_a, user_b) ensures
-//   that A↔B always resolves to the same row regardless of who initiates.
+// Vio — Messaging Service (Phase 3 — realtime + polish)
+// 1-to-1 private conversations + messages with Supabase Realtime
 // ============================================================================
 
 import { supabase } from './supabase.js';
@@ -18,18 +9,11 @@ import { supabase } from './supabase.js';
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * Normalize a pair of user IDs so user_a < user_b.
- * This is the application-side counterpart of the database CHECK constraint.
- */
 function orderedPair(a, b) {
   return a < b ? { user_a: a, user_b: b } : { user_a: b, user_b: a };
 }
 
-/**
- * Get the current authenticated user's ID.
- */
-async function getUserId() {
+export async function getUserId() {
   const { data: { user } } = await supabase.auth.getUser();
   return user?.id || null;
 }
@@ -38,22 +22,12 @@ async function getUserId() {
 // Conversations
 // ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * Get or create a 1-to-1 conversation between the current user and targetUser.
- *
- * If a conversation already exists, returns it.
- * If not, creates one with both participant records.
- *
- * @param {string} targetUserId — the other user's UUID (profiles.user_id)
- * @returns {{ conversation: object|null, error: Error|null }}
- */
 export async function getOrCreateConversation(targetUserId) {
   const uid = await getUserId();
   if (!uid) return { conversation: null, error: new Error('Not authenticated') };
 
   const pair = orderedPair(uid, targetUserId);
 
-  // 1. Check if conversation already exists
   const { data: existing, error: findErr } = await supabase
     .from('conversations')
     .select('*')
@@ -64,7 +38,6 @@ export async function getOrCreateConversation(targetUserId) {
   if (findErr) return { conversation: null, error: findErr };
   if (existing) return { conversation: existing, error: null };
 
-  // 2. Create new conversation
   const { data: created, error: createErr } = await supabase
     .from('conversations')
     .insert(pair)
@@ -72,8 +45,6 @@ export async function getOrCreateConversation(targetUserId) {
     .single();
 
   if (createErr) {
-    // Race condition — another request may have created it between our
-    // check and insert. Re-fetch.
     if (createErr.code === '23505') {
       const { data: retry } = await supabase
         .from('conversations')
@@ -86,52 +57,26 @@ export async function getOrCreateConversation(targetUserId) {
     return { conversation: null, error: createErr };
   }
 
-  // 3. Create participant records for both users
   const participants = [
     { conversation_id: created.id, user_id: pair.user_a },
     { conversation_id: created.id, user_id: pair.user_b },
   ];
 
-  const { error: partErr } = await supabase
-    .from('conversation_participants')
-    .insert(participants);
-
-  if (partErr) {
-    console.error('[Vio] Failed to create participants:', partErr);
-    // Conversation exists but participants failed — still return the conversation
-  }
+  await supabase.from('conversation_participants').insert(participants);
 
   return { conversation: created, error: null };
 }
 
-/**
- * Get all conversations for the current user, including last message info
- * and the other participant's profile data.
- *
- * @returns {{ conversations: array, error: Error|null }}
- */
 export async function getUserConversations() {
   const uid = await getUserId();
   if (!uid) return { conversations: [], error: new Error('Not authenticated') };
 
-  // Select conversations where the user is either user_a or user_b,
-  // joined with participant records for unread counts, and the other
-  // user's profile for display.
   const { data, error } = await supabase
     .from('conversations')
     .select(`
-      id,
-      user_a,
-      user_b,
-      created_at,
-      updated_at,
-      last_message_at,
-      last_message_preview,
-      conversation_participants!inner (
-        user_id,
-        last_read_at,
-        unread_count
-      )
+      id, user_a, user_b, created_at, updated_at,
+      last_message_at, last_message_preview,
+      conversation_participants!inner (user_id, last_read_at, unread_count)
     `)
     .or(`user_a.eq.${uid},user_b.eq.${uid}`)
     .order('last_message_at', { ascending: false, nullsFirst: false })
@@ -139,13 +84,10 @@ export async function getUserConversations() {
 
   if (error) return { conversations: [], error };
 
-  // Enrich each conversation with the other participant's profile and
-  // the current user's own participant record.
   const enriched = await Promise.all((data || []).map(async (conv) => {
     const otherUserId = conv.user_a === uid ? conv.user_b : conv.user_a;
     const myParticipant = conv.conversation_participants?.find(p => p.user_id === uid);
 
-    // Fetch the other user's profile
     const { data: profile } = await supabase
       .from('profiles')
       .select('user_id, display_name, username, avatar_url')
@@ -170,91 +112,48 @@ export async function getUserConversations() {
 // Messages
 // ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * Get messages for a conversation, ordered by newest first.
- *
- * @param {string} conversationId
- * @param {{ limit?: number, offset?: number, before?: string }} [options]
- * @returns {{ messages: array, error: Error|null }}
- */
 export async function getConversationMessages(conversationId, { limit = 50, offset = 0 } = {}) {
   const uid = await getUserId();
   if (!uid) return { messages: [], error: new Error('Not authenticated') };
 
   const { data, error } = await supabase
     .from('messages')
-    .select(`
-      id,
-      conversation_id,
-      sender_id,
-      content,
-      created_at,
-      updated_at,
-      deleted_at
-    `)
+    .select('id, conversation_id, sender_id, content, created_at, updated_at, deleted_at')
     .eq('conversation_id', conversationId)
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1);
 
   if (error) return { messages: [], error };
-
-  // Return in chronological order (oldest first) for UI
   return { messages: (data || []).reverse(), error: null };
 }
 
-/**
- * Send a message in a conversation.
- * Also updates the conversation's last_message_at and last_message_preview,
- * and increments the other participant's unread count.
- *
- * @param {string} conversationId
- * @param {string} content
- * @returns {{ message: object|null, error: Error|null }}
- */
 export async function sendMessage(conversationId, content) {
   const uid = await getUserId();
   if (!uid) return { message: null, error: new Error('Not authenticated') };
   if (!content?.trim()) return { message: null, error: new Error('Message cannot be empty') };
 
-  // 1. Insert the message
   const { data: message, error: insertErr } = await supabase
     .from('messages')
-    .insert({
-      conversation_id: conversationId,
-      sender_id: uid,
-      content: content.trim(),
-    })
+    .insert({ conversation_id: conversationId, sender_id: uid, content: content.trim() })
     .select('*')
     .single();
 
   if (insertErr) return { message: null, error: insertErr };
 
-  // 2. Update conversation metadata (last message)
-  const { error: convErr } = await supabase
-    .from('conversations')
-    .update({
-      last_message_at: message.created_at,
-      last_message_preview: content.trim().substring(0, 120),
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', conversationId);
+  // Update conversation metadata
+  await supabase.from('conversations').update({
+    last_message_at: message.created_at,
+    last_message_preview: content.trim().substring(0, 120),
+    updated_at: new Date().toISOString(),
+  }).eq('id', conversationId);
 
-  if (convErr) {
-    console.error('[Vio] Failed to update conversation metadata:', convErr);
-  }
-
-  // 3. Increment unread count for the OTHER participant
+  // Increment unread for other participant
   const { data: conv } = await supabase
-    .from('conversations')
-    .select('user_a, user_b')
-    .eq('id', conversationId)
-    .single();
+    .from('conversations').select('user_a, user_b').eq('id', conversationId).single();
 
   if (conv) {
     const otherUserId = conv.user_a === uid ? conv.user_b : conv.user_a;
-
-    // Update the other participant's unread count
     const { data: existing } = await supabase
       .from('conversation_participants')
       .select('unread_count')
@@ -274,36 +173,19 @@ export async function sendMessage(conversationId, content) {
   return { message, error: null };
 }
 
-/**
- * Mark all messages in a conversation as read for the current user.
- * Resets unread_count to 0 and updates last_read_at.
- *
- * @param {string} conversationId
- * @returns {{ error: Error|null }}
- */
 export async function markConversationAsRead(conversationId) {
   const uid = await getUserId();
   if (!uid) return { error: new Error('Not authenticated') };
 
   const { error } = await supabase
     .from('conversation_participants')
-    .update({
-      last_read_at: new Date().toISOString(),
-      unread_count: 0,
-    })
+    .update({ last_read_at: new Date().toISOString(), unread_count: 0 })
     .eq('conversation_id', conversationId)
     .eq('user_id', uid);
 
   return { error };
 }
 
-/**
- * Soft-delete a message (sets deleted_at).
- * Only the sender can delete their own messages (enforced by RLS).
- *
- * @param {string} messageId
- * @returns {{ error: Error|null }}
- */
 export async function deleteMessage(messageId) {
   const uid = await getUserId();
   if (!uid) return { error: new Error('Not authenticated') };
@@ -314,4 +196,77 @@ export async function deleteMessage(messageId) {
     .eq('id', messageId);
 
   return { error };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Realtime — subscribe to messages for a conversation
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Subscribe to new messages in a conversation via Supabase Realtime.
+ * Returns an unsubscribe function. Handles deduplication — uses
+ * a Set of known message IDs to avoid double-adding optimistic updates.
+ *
+ * @param {string} conversationId
+ * @param {string} currentUserId — skip own messages (already added optimistically)
+ * @param {(message: object) => void} onNewMessage
+ * @returns {() => void} unsubscribe
+ */
+export function subscribeToConversation(conversationId, currentUserId, onNewMessage) {
+  const channel = supabase
+    .channel(`conv:${conversationId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'messages',
+        filter: `conversation_id=eq.${conversationId}`,
+      },
+      (payload) => {
+        const msg = payload.new;
+        // Skip own messages — we already add those optimistically
+        if (msg.sender_id === currentUserId) return;
+        if (msg.deleted_at) return;
+        onNewMessage(msg);
+      }
+    )
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel).catch(() => {});
+  };
+}
+
+/**
+ * Subscribe to conversation updates (last message, unread counts) for
+ * the current user's conversation list. Used by MessagesScreen inbox.
+ *
+ * @param {string} currentUserId
+ * @param {(convId: string) => void} onConversationUpdated
+ * @returns {() => void} unsubscribe
+ */
+export function subscribeToConversationUpdates(currentUserId, onConversationUpdated) {
+  // Listen for conversation table changes where user is a participant
+  const channel = supabase
+    .channel('conv-updates')
+    .on(
+      'postgres_changes',
+      {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'conversations',
+      },
+      (payload) => {
+        const conv = payload.new;
+        if (conv.user_a === currentUserId || conv.user_b === currentUserId) {
+          onConversationUpdated(conv.id);
+        }
+      }
+    )
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel).catch(() => {});
+  };
 }

@@ -1,9 +1,8 @@
 // ============================================================================
 // Vio v2.0 — Application Root
-// Clean architecture: lazy-loaded pages, shared layouts, error boundaries.
 // ============================================================================
 
-import React, { useState, useEffect, Suspense, lazy } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { V, theme, safe, fmt, timeAgo, gradientStyle, softGradientStyle } from './utils/design-system.js';
 import { useVioStore, setSession, initSession, doSignOut } from './store/index.js';
@@ -26,8 +25,6 @@ import TopRail from './components/navigation/TopRail.jsx';
 import Drawer from './components/navigation/Drawer.jsx';
 import BottomNav from './components/navigation/BottomNav.jsx';
 
-// ============================================================================
-
 export default function App() {
   const store = useVioStore();
   const { initialized, loading, session, profile, posts, ledger, earned, spent, balance } = store;
@@ -47,16 +44,11 @@ export default function App() {
     setSession({ theme: d ? 'dark' : 'light' });
   };
 
-  // Validate Supabase configuration early
   useEffect(() => {
     const err = getSupabaseConfigError();
-    if (err) {
-      console.error('[Vio] Configuration error:', err);
-      setConfigError(err);
-    }
+    if (err) { console.error('[Vio] Configuration error:', err); setConfigError(err); }
   }, []);
 
-  // Online/offline detection
   useEffect(() => {
     const goOffline = () => setIsOffline(true);
     const goOnline = () => setIsOffline(false);
@@ -66,7 +58,6 @@ export default function App() {
     return () => { window.removeEventListener('offline', goOffline); window.removeEventListener('online', goOnline); };
   }, []);
 
-  // Session recovery — only if config is valid
   useEffect(() => { if (!configError) initSession(); }, [configError]);
 
   useEffect(() => {
@@ -75,7 +66,6 @@ export default function App() {
       if (initialized) setFlow(session.authenticated ? 'app' : 'auth');
     }, 2700);
     return () => { clearTimeout(exit); clearTimeout(route); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialized, session.authenticated]);
 
   const handleAuthed = () => setFlow('app');
@@ -83,7 +73,6 @@ export default function App() {
   const handleViewProfile = (userId) => { setViewingUserId(userId); setTab('profile'); };
   const handleBackToOwnProfile = () => { setViewingUserId(null); };
 
-  // Config error screen
   if (configError) {
     return (
       <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'#070A18', color:'#F8FAFC', fontFamily:'-apple-system, BlinkMacSystemFont, sans-serif' }}>
@@ -97,11 +86,9 @@ export default function App() {
     );
   }
 
-  // Splash and auth flows
   if (flow === 'splash' || (loading && !initialized)) return <SplashScreen out={splashOut} />;
   if (flow === 'auth') return <AuthScreen dark={dark} setDark={setDark} onAuthed={handleAuthed} />;
 
-  // Main app — professional light/dark theme
   const t = theme(dark);
   const uiCtx = {
     dark, bg: t.bg, surface: t.surface, surfaceElevated: t.surfaceElevated,
@@ -146,40 +133,32 @@ export default function App() {
     settings:      <SettingsScreen ui={uiCtx} setDark={setDark} />,
     legal:         <LegalScreen ui={uiCtx} activePage="tos" />,
     saved:         <SavedScreen ui={uiCtx} onViewProfile={handleViewProfile} />,
-    messages:       <MessagesScreen ui={uiCtx} onOpenConversation={setActiveConversation} />,
+    messages:      <MessagesScreen ui={uiCtx} onOpenConversation={setActiveConversation} />,
   };
+
+  // ChatScreen as fullscreen overlay
+  if (activeConversation) {
+    return (
+      <div style={{ background: t.bg, minHeight: '100vh' }}>
+        <ChatScreen
+          ui={uiCtx}
+          conversation={activeConversation}
+          onBack={() => setActiveConversation(null)}
+          onViewProfile={handleViewProfile}
+        />
+      </div>
+    );
+  }
 
   return (
     <div style={{ background: t.bg, minHeight: '100vh', color: t.textPrimary }} className="antialiased font-sans">
-      {/* Ambient background orbs */}
-      <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden>
-      </div>
+      <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden />
 
       <Drawer ui={uiCtx} open={drawerOpen} onClose={() => setDrawerOpen(false)} setTab={setTab} setDark={setDark} onSignOut={handleSignOut} onProfileClick={() => { setViewingUserId(null); setTab("profile"); }} />
       <TopRail ui={uiCtx} setDark={setDark} tab={tab} onMenu={() => setDrawerOpen(true)} onSignOut={handleSignOut} setTab={setTab} />
 
       {isOffline && (
-        <div className="max-w-[600px] mx-auto px-3" role="alert" aria-live="polite">
-          <div className="rounded-2xl p-3 text-center text-[13px] font-medium" style={{ background: `${V.red}15`, color: V.red, border: `1px solid ${V.red}33` }}>
-            You are offline. Some features may be unavailable.
-          </div>
-        </div>
-      )}
-
-      <main className="relative w-full max-w-[600px] mx-auto pb-32 pt-2">
-        <div key={tab} className="animate-[vFade_280ms_cubic-bezier(0.22,1,0.36,1)]">
-          {pageMap[tab] || <HomeScreen ui={uiCtx} posts={posts} />}
-        </div>
-      </main>
-
-      {activeConversation ? (
-        <ChatScreen ui={uiCtx} conversation={activeConversation} onBack={() => setActiveConversation(null)} />
-      ) : (<>
-      <Drawer ui={uiCtx} open={drawerOpen} onClose={() => setDrawerOpen(false)} setTab={setTab} setDark={setDark} onSignOut={handleSignOut} onProfileClick={() => { setViewingUserId(null); setTab("profile"); }} />
-      <TopRail ui={uiCtx} setDark={setDark} tab={tab} onMenu={() => setDrawerOpen(true)} onSignOut={handleSignOut} setTab={setTab} />
-
-      {isOffline && (
-        <div className="max-w-[600px] mx-auto px-3" role="alert" aria-live="polite">
+        <div className="max-w-[600px] mx-auto px-3" role="alert">
           <div className="rounded-2xl p-3 text-center text-[13px] font-medium" style={{ background: `${V.red}15`, color: V.red, border: `1px solid ${V.red}33` }}>
             You are offline. Some features may be unavailable.
           </div>
@@ -193,7 +172,6 @@ export default function App() {
       </main>
 
       <BottomNav tab={tab} setTab={setTab} dark={dark} onProfileClick={() => { setViewingUserId(null); setTab("profile"); }} />
-      </>)}
     </div>
   );
 }
