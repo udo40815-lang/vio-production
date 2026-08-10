@@ -282,7 +282,7 @@ function ChatScreen({ ui, conversation, onBack, onViewProfile }) {
           <ArrowLeft size={18} style={{ color: ui.textPrimary }} />
         </button>
         <button
-          onClick={() => { if (onViewProfile && otherUser?.user_id) { onBack(); onViewProfile(otherUser.user_id); } }}
+          onClick={() => { if (onViewProfile && otherUser?.user_id) { onBack(); setTimeout(() => onViewProfile(otherUser.user_id), 100); } }}
           className="flex items-center gap-3 flex-1 min-w-0"
           style={{ background: 'none', border: 'none', cursor: onViewProfile ? 'pointer' : 'default' }}
         >

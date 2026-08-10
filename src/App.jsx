@@ -20,6 +20,7 @@ import SettingsScreen from './pages/SettingsScreen.jsx';
 import LegalScreen from './pages/LegalScreen.jsx';
 import SavedScreen from './pages/SavedScreen.jsx';
 import MessagesScreen from './pages/MessagesScreen.jsx';
+import NewMessageScreen from './pages/NewMessageScreen.jsx';
 import ChatScreen from './pages/ChatScreen.jsx';
 import TopRail from './components/navigation/TopRail.jsx';
 import Drawer from './components/navigation/Drawer.jsx';
@@ -36,6 +37,8 @@ export default function App() {
   const [splashOut, setSplashOut] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [activeConversation, setActiveConversation] = useState(null);
+  const [showNewMessage, setShowNewMessage] = useState(false);
+  const [previousTab, setPreviousTab] = useState(null); // track where we were before chat
   const [isOffline, setIsOffline] = useState(false);
   const [configError, setConfigError] = useState(null);
 
@@ -72,6 +75,34 @@ export default function App() {
   const handleSignOut = async () => { await doSignOut(); setFlow('auth'); };
   const handleViewProfile = (userId) => { setViewingUserId(userId); setTab('profile'); };
   const handleBackToOwnProfile = () => { setViewingUserId(null); };
+
+  // ── Messaging navigation ──
+  const openChat = (conv) => {
+    setActiveConversation(conv);
+  };
+
+  const closeChat = () => {
+    setActiveConversation(null);
+  };
+
+  const openNewMessage = () => {
+    setShowNewMessage(true);
+  };
+
+  const closeNewMessage = () => {
+    setShowNewMessage(false);
+  };
+
+  const handleStartConversation = (conv) => {
+    // From Profile → Message: just open chat, keep tab on profile for back
+    setPreviousTab(tab);
+    setActiveConversation(conv);
+  };
+
+  const handleBackFromChat = () => {
+    setActiveConversation(null);
+    // previousTab is preserved so the app returns to the right screen
+  };
 
   if (configError) {
     return (
@@ -127,23 +158,41 @@ export default function App() {
     discover:      <DiscoverScreen ui={uiCtx} posts={posts} />,
     search:        <SearchScreen ui={uiCtx} posts={posts} onViewProfile={handleViewProfile} />,
     create:        <CreateScreen ui={uiCtx} onCreated={() => setTab('home')} />,
-    profile:       <ProfileScreen ui={uiCtx} posts={posts} viewingUserId={viewingUserId} onBackToOwnProfile={handleBackToOwnProfile} onViewProfile={handleViewProfile} setTab={setTab} onStartConversation={setActiveConversation} />,
+    profile:       <ProfileScreen ui={uiCtx} posts={posts} viewingUserId={viewingUserId} onBackToOwnProfile={handleBackToOwnProfile} onViewProfile={handleViewProfile} setTab={setTab} onStartConversation={handleStartConversation} />,
     wallet:        <WalletScreen ui={uiCtx} ledger={ledger} />,
     notifications: <NotificationsScreen ui={uiCtx} onViewProfile={handleViewProfile} />,
     settings:      <SettingsScreen ui={uiCtx} setDark={setDark} />,
     legal:         <LegalScreen ui={uiCtx} activePage="tos" />,
     saved:         <SavedScreen ui={uiCtx} onViewProfile={handleViewProfile} />,
-    messages:      <MessagesScreen ui={uiCtx} onOpenConversation={setActiveConversation} />,
+    messages:      <MessagesScreen ui={uiCtx} onOpenConversation={openChat} onNewMessage={openNewMessage} />,
   };
 
-  // ChatScreen as fullscreen overlay
+  // ── New Message screen overlay ──
+  if (showNewMessage) {
+    return (
+      <div style={{ background: t.bg, minHeight: '100vh' }}>
+        <div className="relative w-full max-w-[600px] mx-auto">
+          <NewMessageScreen
+            ui={uiCtx}
+            onBack={closeNewMessage}
+            onOpenChat={(conv) => {
+              closeNewMessage();
+              openChat(conv);
+            }}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // ── Chat screen overlay ──
   if (activeConversation) {
     return (
       <div style={{ background: t.bg, minHeight: '100vh' }}>
         <ChatScreen
           ui={uiCtx}
           conversation={activeConversation}
-          onBack={() => setActiveConversation(null)}
+          onBack={handleBackFromChat}
           onViewProfile={handleViewProfile}
         />
       </div>

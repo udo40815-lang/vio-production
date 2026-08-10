@@ -1,14 +1,15 @@
 // ============================================================================
-// Vio — Messages Inbox Screen (Phase 3 — realtime updates)
+// Vio — Messages Inbox Screen
+// Conversation list with + button to start new conversations.
 // ============================================================================
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { MessagesSquare, Loader2, AlertCircle } from 'lucide-react';
+import { MessagesSquare, Loader2, AlertCircle, Plus } from 'lucide-react';
 import { V, timeAgo } from '../utils/design-system.js';
 import { getUserConversations, subscribeToConversationUpdates } from '../lib/messages.js';
 import Avatar from '../components/ui/Avatar.jsx';
 
-function MessagesScreen({ ui, onOpenConversation }) {
+function MessagesScreen({ ui, onOpenConversation, onNewMessage }) {
   const [conversations, setConversations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -22,35 +23,43 @@ function MessagesScreen({ ui, onOpenConversation }) {
     setLoading(false);
   }, []);
 
-  // Initial load
   useEffect(() => { loadConversations(); }, [loadConversations]);
 
-  // Realtime updates for conversation list
+  // Realtime conversation updates
   useEffect(() => {
     const uid = ui.currentUserId;
     if (!uid) return;
-
     const unsub = subscribeToConversationUpdates(uid, () => {
-      // Re-fetch conversations when any conv changes
       refreshRef.current = true;
       getUserConversations().then(({ conversations: convs }) => {
-        if (refreshRef.current) {
-          setConversations(convs || []);
-        }
+        if (refreshRef.current) setConversations(convs || []);
       });
     });
-
-    return () => {
-      refreshRef.current = false;
-      unsub();
-    };
+    return () => { refreshRef.current = false; unsub(); };
   }, [ui.currentUserId]);
+
+  // ── Shared header ──
+  const header = (
+    <div className="flex items-center justify-between mb-5">
+      <h1 className="text-[24px] font-bold tracking-[-0.03em]" style={{ color: ui.textPrimary }}>
+        Messages
+      </h1>
+      <button
+        onClick={onNewMessage}
+        className="w-[36px] h-[36px] rounded-full flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95"
+        style={{ background: `${V.royal}14` }}
+        aria-label="New message"
+      >
+        <Plus size={18} style={{ color: V.royal }} strokeWidth={2.5} />
+      </button>
+    </div>
+  );
 
   // ── Loading ──
   if (loading) {
     return (
       <section className="px-4 pt-6 pb-20">
-        <h1 className="text-[24px] font-bold tracking-[-0.03em] mb-6" style={{ color: ui.textPrimary }}>Messages</h1>
+        {header}
         <div className="flex items-center justify-center py-16 gap-2" style={{ color: ui.textMuted }}>
           <Loader2 size={18} className="animate-spin" />
           <span className="text-[13px]">Loading conversations...</span>
@@ -63,7 +72,7 @@ function MessagesScreen({ ui, onOpenConversation }) {
   if (error && conversations.length === 0) {
     return (
       <section className="px-4 pt-6 pb-20">
-        <h1 className="text-[24px] font-bold tracking-[-0.03em] mb-6" style={{ color: ui.textPrimary }}>Messages</h1>
+        {header}
         <div className="rounded-3xl p-10 text-center" style={{ background: ui.dark ? V.surfaceDark : '#FFFFFF', border: `1px solid ${ui.border}` }}>
           <div className="mx-auto w-12 h-12 rounded-2xl flex items-center justify-center" style={{ background: `${V.red}15` }}>
             <AlertCircle size={20} style={{ color: V.red }} />
@@ -80,15 +89,22 @@ function MessagesScreen({ ui, onOpenConversation }) {
   if (conversations.length === 0) {
     return (
       <section className="px-4 pt-6 pb-20">
-        <h1 className="text-[24px] font-bold tracking-[-0.03em] mb-6" style={{ color: ui.textPrimary }}>Messages</h1>
+        {header}
         <div className="rounded-3xl p-10 text-center" style={{ background: ui.dark ? V.surfaceDark : '#FFFFFF', border: `1px solid ${ui.border}` }}>
           <div className="mx-auto w-12 h-12 rounded-2xl flex items-center justify-center" style={{ background: `${V.royal}15` }}>
             <MessagesSquare size={20} style={{ color: ui.textMuted }} />
           </div>
           <div className="mt-4 text-[16px] font-semibold" style={{ color: ui.textPrimary }}>No messages yet</div>
           <div className="mt-1.5 text-[13px] leading-relaxed max-w-xs mx-auto" style={{ color: ui.textSecondary }}>
-            Start a conversation with someone on Vio by visiting their profile.
+            Start a conversation with someone on Vio.
           </div>
+          <button
+            onClick={onNewMessage}
+            className="mt-4 h-[36px] px-5 rounded-full text-[13px] font-semibold transition-all duration-200 hover:scale-[1.02] active:scale-95"
+            style={{ background: V.royal, color: '#FFF' }}
+          >
+            + New message
+          </button>
         </div>
       </section>
     );
@@ -97,7 +113,7 @@ function MessagesScreen({ ui, onOpenConversation }) {
   // ── Conversation List ──
   return (
     <section className="px-4 pt-6 pb-20">
-      <h1 className="text-[24px] font-bold tracking-[-0.03em] mb-5" style={{ color: ui.textPrimary }}>Messages</h1>
+      {header}
       <div className="space-y-1">
         {conversations.map((conv) => (
           <button
