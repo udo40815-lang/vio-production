@@ -6,7 +6,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { MessagesSquare, Loader2, AlertCircle, Plus } from 'lucide-react';
 import { V, timeAgo } from '../utils/design-system.js';
-import { getUserConversations, subscribeToConversationUpdates } from '../lib/messages.js';
+import { getUserConversations, subscribeToConversationList } from '../lib/messages.js';
 import Avatar from '../components/ui/Avatar.jsx';
 
 function MessagesScreen({ ui, onOpenConversation, onNewMessage }) {
@@ -29,7 +29,7 @@ function MessagesScreen({ ui, onOpenConversation, onNewMessage }) {
   useEffect(() => {
     const uid = ui.currentUserId;
     if (!uid) return;
-    const unsub = subscribeToConversationUpdates(uid, () => {
+    const unsub = subscribeToConversationList(() => {
       refreshRef.current = true;
       getUserConversations().then(({ conversations: convs }) => {
         if (refreshRef.current) setConversations(convs || []);
