@@ -1,14 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { V, safe, fmt, timeAgo, gradientStyle, softGradientStyle } from '../utils/design-system.js';
-import { Camera, Globe, MapPin, Calendar, Sparkles, Award, Play, FileText, Image as ImageIcon, Bookmark, Sparkle, ChevronRight, Plus, Eye, Clock, ArrowLeft, Loader2, UserPlus, ExternalLink, Briefcase, GraduationCap, Instagram, Linkedin, Github, Twitter, Music, Youtube } from 'lucide-react';
+import { Camera, Globe, MapPin, Calendar, Sparkles, Award, Play, FileText, Image as ImageIcon, Bookmark, Sparkle, ChevronRight, Plus, Eye, Clock, ArrowLeft, Loader2, UserPlus, ExternalLink, Briefcase, GraduationCap, Instagram, Linkedin, Github, Twitter, Music, Youtube, MessageCircle } from 'lucide-react';
 import Ring from '../components/ui/Ring.jsx';
 import StatCard from '../components/ui/StatCard.jsx';
 import EmptyState from '../components/ui/EmptyState.jsx';
 import VicoinIcon from '../components/ui/VicoinIcon.jsx';
 import VioMark from '../components/ui/VioMark.jsx';
 import { doUploadAvatar, doUploadCover, doUpdateProfile, doGetProfileById, doGetPostsByUserId, doToggleFollow, doCheckFollow, doGetFollowers, doGetFollowing, doCreateNotification, useVioStore } from '../store/index.js';
+import { getOrCreateConversation } from '../lib/messages.js';
 
-function ProfileScreen({ ui, posts, viewingUserId, onBackToOwnProfile, onViewProfile, setTab }) {
+function ProfileScreen({ ui, posts, viewingUserId, onBackToOwnProfile, onViewProfile, setTab, onStartConversation }) {
   const [activeTab, setActiveTab] = useState('posts');
   const [viewingProfile, setViewingProfile] = useState(null);
   const [viewingPosts, setViewingPosts] = useState([]);
@@ -20,6 +21,7 @@ function ProfileScreen({ ui, posts, viewingUserId, onBackToOwnProfile, onViewPro
   const [followingList, setFollowingList] = useState([]);
   const [loadingList, setLoadingList] = useState(false);
   const [showAboutModal, setShowAboutModal] = useState(false);
+  const [messaging, setMessaging] = useState(false);
   const isOwnProfile = !viewingUserId;
   const [editing, setEditing] = useState(false);
 
@@ -182,7 +184,7 @@ function ProfileScreen({ ui, posts, viewingUserId, onBackToOwnProfile, onViewPro
             <div className="text-[22px] font-semibold tracking-[-0.03em] leading-tight" style={{ color: ui.textPrimary }}>{profileData.displayName || profileData.handle || 'You'}</div>
             <div className="text-[14px] mt-0.5" style={{ color: ui.textMuted }}>@{profileData.handle || 'you'}</div>
           </div>
-          {!displayIsOwn && (
+          {!displayIsOwn && (<>
             <button onClick={async () => {
               const targetUserId = viewingUserId;
               if (!targetUserId) return;
@@ -213,7 +215,42 @@ function ProfileScreen({ ui, posts, viewingUserId, onBackToOwnProfile, onViewPro
             }} className="shrink-0 h-[34px] px-4 rounded-full text-[12px] font-semibold transition-all duration-200 hover:scale-[1.02] active:scale-95" style={isFollowing ? { background: ui.dark ? 'rgba(255,255,255,0.08)' : 'rgba(15,18,38,0.06)', color: ui.textPrimary, border: `1px solid ${ui.border}` } : { ...gradientStyle(120), color: '#FFF' }}>
               {isFollowing ? 'Following' : 'Follow'}
             </button>
-          )}
+
+            {/* Message button */}
+            <button
+              onClick={async () => {
+                const targetUserId = viewingUserId;
+                if (!targetUserId) return;
+                setMessaging(true);
+                const { conversation } = await getOrCreateConversation(targetUserId);
+                setMessaging(false);
+                if (conversation && onStartConversation) {
+                  const otherUser = viewingProfile || displayProfile;
+                  const convWithUser = {
+                    ...conversation,
+                    other_user: {
+                      user_id: targetUserId,
+                      username: otherUser?.username || '',
+                      display_name: otherUser?.display_name || '',
+                      avatar_url: otherUser?.avatar_url || '',
+                    },
+                  };
+                  onStartConversation(convWithUser);
+                }
+              }}
+              disabled={messaging}
+              className="shrink-0 h-[34px] px-3 rounded-full text-[12px] font-semibold transition-all duration-200 hover:scale-[1.02] active:scale-95 flex items-center gap-1.5"
+              style={{ background: ui.dark ? V.surfaceDark : '#F1F1F4', color: ui.textPrimary, border: "`1px solid ${ui.border}`" }}
+              aria-label="Send message"
+            >
+              {messaging ? (
+                <Loader2 size={12} className="animate-spin" />
+              ) : (
+                <MessageCircle size={13} />
+              )}
+              Message
+            </button>
+          </>)}
         </div>
 
         {/* Info fields */}

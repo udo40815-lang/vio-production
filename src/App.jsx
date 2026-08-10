@@ -20,6 +20,8 @@ import NotificationsScreen from './pages/NotificationsScreen.jsx';
 import SettingsScreen from './pages/SettingsScreen.jsx';
 import LegalScreen from './pages/LegalScreen.jsx';
 import SavedScreen from './pages/SavedScreen.jsx';
+import MessagesScreen from './pages/MessagesScreen.jsx';
+import ChatScreen from './pages/ChatScreen.jsx';
 import TopRail from './components/navigation/TopRail.jsx';
 import Drawer from './components/navigation/Drawer.jsx';
 import BottomNav from './components/navigation/BottomNav.jsx';
@@ -36,6 +38,7 @@ export default function App() {
   const [viewingUserId, setViewingUserId] = useState(null);
   const [splashOut, setSplashOut] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [activeConversation, setActiveConversation] = useState(null);
   const [isOffline, setIsOffline] = useState(false);
   const [configError, setConfigError] = useState(null);
 
@@ -137,12 +140,13 @@ export default function App() {
     discover:      <DiscoverScreen ui={uiCtx} posts={posts} />,
     search:        <SearchScreen ui={uiCtx} posts={posts} onViewProfile={handleViewProfile} />,
     create:        <CreateScreen ui={uiCtx} onCreated={() => setTab('home')} />,
-    profile:       <ProfileScreen ui={uiCtx} posts={posts} viewingUserId={viewingUserId} onBackToOwnProfile={handleBackToOwnProfile} onViewProfile={handleViewProfile} setTab={setTab} />,
+    profile:       <ProfileScreen ui={uiCtx} posts={posts} viewingUserId={viewingUserId} onBackToOwnProfile={handleBackToOwnProfile} onViewProfile={handleViewProfile} setTab={setTab} onStartConversation={setActiveConversation} />,
     wallet:        <WalletScreen ui={uiCtx} ledger={ledger} />,
     notifications: <NotificationsScreen ui={uiCtx} onViewProfile={handleViewProfile} />,
     settings:      <SettingsScreen ui={uiCtx} setDark={setDark} />,
     legal:         <LegalScreen ui={uiCtx} activePage="tos" />,
     saved:         <SavedScreen ui={uiCtx} onViewProfile={handleViewProfile} />,
+    messages:       <MessagesScreen ui={uiCtx} onOpenConversation={setActiveConversation} />,
   };
 
   return (
@@ -168,7 +172,28 @@ export default function App() {
         </div>
       </main>
 
+      {activeConversation ? (
+        <ChatScreen ui={uiCtx} conversation={activeConversation} onBack={() => setActiveConversation(null)} />
+      ) : (<>
+      <Drawer ui={uiCtx} open={drawerOpen} onClose={() => setDrawerOpen(false)} setTab={setTab} setDark={setDark} onSignOut={handleSignOut} onProfileClick={() => { setViewingUserId(null); setTab("profile"); }} />
+      <TopRail ui={uiCtx} setDark={setDark} tab={tab} onMenu={() => setDrawerOpen(true)} onSignOut={handleSignOut} setTab={setTab} />
+
+      {isOffline && (
+        <div className="max-w-[600px] mx-auto px-3" role="alert" aria-live="polite">
+          <div className="rounded-2xl p-3 text-center text-[13px] font-medium" style={{ background: `${V.red}15`, color: V.red, border: `1px solid ${V.red}33` }}>
+            You are offline. Some features may be unavailable.
+          </div>
+        </div>
+      )}
+
+      <main className="relative w-full max-w-[600px] mx-auto pb-32 pt-2">
+        <div key={tab} className="animate-[vFade_280ms_cubic-bezier(0.22,1,0.36,1)]">
+          {pageMap[tab] || <HomeScreen ui={uiCtx} posts={posts} />}
+        </div>
+      </main>
+
       <BottomNav tab={tab} setTab={setTab} dark={dark} onProfileClick={() => { setViewingUserId(null); setTab("profile"); }} />
+      </>)}
     </div>
   );
 }
