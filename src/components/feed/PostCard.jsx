@@ -14,7 +14,7 @@ const REACTION_ICON_MAP = {
   love: { icon: Heart,    color: '#EF4444', label: 'Love' },
 };
 
-function PostCard({ post, ui, likesCount, reactionCounts, myReaction, onLike, onReact, onLikeCountClick, onSave, onEdit, onDelete, isOwn }) {
+function PostCard({ post, ui, likesCount, reactionCounts, myReaction, onLike, onReact, onLikeCountClick, onSave, saved, onEdit, onDelete, isOwn }) {
   const [showMenu, setShowMenu] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
   const longPressRef = useRef(null);
@@ -253,14 +253,14 @@ function PostCard({ post, ui, likesCount, reactionCounts, myReaction, onLike, on
           {/* Save / Bookmark button */}
           <button onClick={() => onSave?.()}
             className="transition-all duration-200 hover:scale-105 cursor-pointer"
-            aria-label={onSave ? 'Remove from saved' : 'Save post'}
+            aria-label={saved ? 'Remove from saved' : 'Save post'}
             style={{ background: 'none', border: 'none', padding: '6px 8px', display: 'flex', alignItems: 'center', borderRadius: '24px' }}
           >
             <Bookmark
               size={18}
               strokeWidth={2}
-              color={onSave ? (ui.dark ? '#FFFFFF' : V.royal) : ui.textSecondary}
-              fill={onSave ? (ui.dark ? '#FFFFFF' : V.royal) : 'transparent'}
+              color={saved ? (ui.dark ? '#FFFFFF' : V.royal) : ui.textSecondary}
+              fill={saved ? (ui.dark ? '#FFFFFF' : V.royal) : 'transparent'}
             />
           </button>
         </div>

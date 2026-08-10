@@ -92,6 +92,7 @@ export default function SavedScreen({ ui, onViewProfile }) {
             myReaction={myReactions[post.id] || null}
             onLike={() => {}}
             onReact={() => {}}
+            saved={true}
             onSave={() => handleUnsave(post.id)}
             onLikeCountClick={() => {}}
             isOwn={post.author_id === uiCtx.currentUserId}
